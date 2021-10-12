@@ -19,6 +19,7 @@ public class Complejo {
 		this.realProperty().set(real);
 	}
 	
+	
 	public DoubleProperty imaginarioProperty() {
 		return this.imaginario;
 	}
