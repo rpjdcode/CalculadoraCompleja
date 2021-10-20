@@ -4,6 +4,7 @@ import java.util.ArrayList;
 
 import javafx.application.Application;
 import javafx.beans.binding.Bindings;
+import javafx.beans.binding.DoubleExpression;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.ComboBox;
@@ -23,6 +24,8 @@ public class CalculadoraCompleja extends Application {
 	private HBox root;
 	
 	private Complejo complejo1, complejo2, resultado;
+	
+	private DoubleExpression sumReal, sumImg, resReal, resImg, mulReal, mulImg, divReal, divImg;
 	
 	
 	@Override
@@ -69,50 +72,10 @@ public class CalculadoraCompleja extends Application {
 		for (String s:simbolos) {
 			ops.add(s);
 		}
+		
 		// Adición de los símbolos al ComboBox
 		operadores = new ComboBox<String>();
-		
 		operadores.getItems().addAll(ops);
-		operadores.getSelectionModel().select(0);
-//		operadores.getSelectionModel().select(0);
-		
-		// Listener para cuando el usuario seleccione un operador, realizar los cálculos correspondientes
-		operadores.getSelectionModel().selectedItemProperty().addListener((o, ov, nv) -> {
-			switch (nv) {
-			case "+": {
-				resultado.setReal(complejo1.getReal()+complejo2.getReal());
-				resultado.setImaginario(complejo1.getImaginario()+complejo2.getImaginario());
-				break;
-			}
-			case "-": {
-				resultado.setReal(complejo1.getReal()-complejo2.getReal());
-				resultado.setImaginario(complejo1.getImaginario()-complejo2.getImaginario());
-				break;
-			}
-			case "*": {
-				double a = complejo1.getReal();
-				double c = complejo2.getReal();
-				double b = complejo1.getImaginario();
-				double d = complejo2.getImaginario();
-				resultado.setReal((a*c)-(b*d));
-				resultado.setImaginario((a*d)+(b*c));
-				break;
-			}
-			case "/": {
-				double a = complejo1.getReal();
-				double c = complejo2.getReal();
-				double b = complejo1.getImaginario();
-				double d = complejo2.getImaginario();
-				resultado.setReal(
-						((a*c) + (b*d))/((c*c)+(d*d))
-						);
-				resultado.setImaginario(
-						((b*c)-(a*d))/((c*c)+(d*d))
-						);
-				break;
-			}
-			}
-		});
 		
 		// Elementos de la izquierda
 		VBox izq = new VBox(operadores);
@@ -124,11 +87,8 @@ public class CalculadoraCompleja extends Application {
 		HBox resComp = new HBox(5, realRes, new Label("+"), imagRes, new Label("i"));
 		VBox mid = new VBox(5, elementosComp1, elementosComp2, new Separator(), resComp);
 		mid.setAlignment(Pos.CENTER);
-		// Elementos de la derecha
-		VBox der = new VBox();
-		der.setAlignment(Pos.CENTER_RIGHT);
 		
-		this.root = new HBox(5, izq, mid, der);
+		this.root = new HBox(5, izq, mid);
 		this.root.setAlignment(Pos.CENTER);
 		this.root.setSpacing(5);
 		
@@ -140,6 +100,7 @@ public class CalculadoraCompleja extends Application {
 		primaryStage.show();
 		
 		// Bindeos para los inputs del primer número complejo
+		
 		Bindings.bindBidirectional(real1.textProperty(), complejo1.realProperty(), new NumberStringConverter());
 		Bindings.bindBidirectional(imaginario1.textProperty(), complejo1.imaginarioProperty(), new NumberStringConverter());
 		
@@ -147,135 +108,56 @@ public class CalculadoraCompleja extends Application {
 		Bindings.bindBidirectional(real2.textProperty(), complejo2.realProperty(), new NumberStringConverter());
 		Bindings.bindBidirectional(imaginario2.textProperty(), complejo2.imaginarioProperty(), new NumberStringConverter());
 		
+		sumReal = complejo1.realProperty().add(complejo2.realProperty());
+		
+		sumImg = complejo1.imaginarioProperty().add(complejo2.imaginarioProperty());
+		
+		resReal = complejo1.realProperty().subtract(complejo2.realProperty());
+		resImg = complejo1.imaginarioProperty().subtract(complejo2.imaginarioProperty());
+		
+		mulReal = (complejo1.realProperty().multiply(complejo2.realProperty())).subtract(complejo1.imaginarioProperty().multiply(complejo2.imaginarioProperty()));
+		mulImg = (complejo1.realProperty().multiply(complejo2.imaginarioProperty())).add(complejo1.imaginarioProperty().multiply(complejo2.realProperty()));
+		
+		divReal = (complejo1.realProperty().multiply(complejo2.realProperty())).add(complejo1.imaginarioProperty().multiply(complejo2.imaginarioProperty()))
+				.divide(complejo2.realProperty().multiply(complejo2.realProperty()).add(complejo2.imaginarioProperty().multiply(complejo2.imaginarioProperty())) );
+		divImg = (complejo1.imaginarioProperty().multiply(complejo2.realProperty())).subtract(complejo1.realProperty().multiply(complejo2.imaginarioProperty()))
+				.divide(complejo2.realProperty().multiply(complejo2.realProperty()).add(complejo2.imaginarioProperty().multiply(complejo2.imaginarioProperty())) );
+		
+		// Listener para cuando el usuario seleccione un operador, realizar los cálculos correspondientes
+		operadores.getSelectionModel().selectedItemProperty().addListener((o, ov, nv) -> {
+			switch (nv) {
+				case "+": {
+					resultado.realProperty().bind(sumReal);
+					resultado.imaginarioProperty().bind(sumImg);
+					break;
+				}
+				case "-": {
+					resultado.realProperty().bind(resReal);
+					resultado.imaginarioProperty().bind(resImg);
+					break;
+				}
+				case "*": {
+					resultado.realProperty().bind(mulReal);
+					resultado.imaginarioProperty().bind(mulImg);
+					break;
+				}
+				case "/": {
+					resultado.realProperty().bind(divReal);
+					resultado.imaginarioProperty().bind(divImg);
+					break;
+				}
+			}
+			});
+		operadores.getSelectionModel().selectFirst();
+		
+		
 		// Bindeos para el resultado
 		realRes.textProperty().bind(resultado.realProperty().asString("%.0f"));
 		imagRes.textProperty().bind(resultado.imaginarioProperty().asString("%.0f"));
-		
-		// Listeners para actualizar en tiempo real
-		real1.textProperty().addListener((o, ov, nv) -> {
-			Double valor = Double.parseDouble(nv);
-			this.complejo1.setReal(valor);
-			double a = this.complejo1.getReal();
-			double b = this.complejo1.getImaginario();
-			double c = this.complejo2.getReal();
-			double d = this.complejo2.getImaginario();
-			switch (operadores.getValue()) {
-				case "+": {
-					this.resultado.setReal(this.complejo1.getReal()+this.complejo2.getReal());
-					break;
-				}
-				case "-": {
-					this.resultado.setReal(this.complejo1.getReal()-this.complejo2.getReal());
-					break;
-				}
-				case "*": {
-					this.resultado.setReal((a*c)-(b*d));
-				}
-				case "/": {
-					this.resultado.setReal(((a*c)+(b*d))/((c*c)+(d*d)));
-					break;
-				}
-			}
-		});
-		
-		real2.textProperty().addListener((o, ov, nv) -> {
-			Double valor = Double.parseDouble(nv);
-			this.complejo2.setReal(valor);
-			double a = this.complejo1.getReal();
-			double b = this.complejo1.getImaginario();
-			double c = this.complejo2.getReal();
-			double d = this.complejo2.getImaginario();
-			switch (operadores.getValue()) {
-				case "+": {
-					this.resultado.setReal(this.complejo1.getReal()+this.complejo2.getReal());
-					break;
-				}
-				
-				case "-": {
-					this.resultado.setReal(this.complejo1.getReal()-this.complejo2.getReal());
-					break;
-				}
-				
-				case "*": {
-					this.resultado.setReal((a*c)-(b*d));
-					break;
-				}
-				
-				case "/": {
-					this.resultado.setReal(((a*c)+(b*d))/((c*c)+(d*d)));
-					break;
-				}
-			}
-		});
-		
-		imaginario1.textProperty().addListener((o, ov, nv) -> {
-			Double valor = Double.parseDouble(nv);
-			this.complejo1.setImaginario(valor);
-			double a = this.complejo1.getReal();
-			double b = this.complejo1.getImaginario();
-			double c = this.complejo2.getReal();
-			double d = this.complejo2.getImaginario();
-			
-			switch (operadores.getValue()) {
-				case "+": {
-					this.resultado.setImaginario(this.complejo1.getImaginario()+this.complejo2.getImaginario());
-					break;
-				}
-				
-				case "-": {
-					this.resultado.setImaginario(this.complejo1.getImaginario()-this.complejo2.getImaginario());
-					break;
-				}
-				
-				case "*": {
-					this.resultado.setImaginario((a*d)+(b*c));
-					break;
-				}
-				
-				case "/": {
-					this.resultado.setImaginario(((b*c)-(a*d))/((c*c)+(d*d)));
-					break;
-				}
-			}
-		});
-		
-		imaginario2.textProperty().addListener((o, ov, nv) -> {
-			Double valor = Double.parseDouble(nv);
-			this.complejo2.setImaginario(valor);
-			double a = this.complejo1.getReal();
-			double b = this.complejo1.getImaginario();
-			double c = this.complejo2.getReal();
-			double d = this.complejo2.getImaginario();
-			
-			switch (operadores.getValue()) {
-				case "+": {
-					this.resultado.setImaginario(this.complejo1.getImaginario()+this.complejo2.getImaginario());
-					break;
-				}
-				
-				case "-": {
-					this.resultado.setImaginario(this.complejo1.getImaginario()-this.complejo2.getImaginario());
-					break;
-				}
-				
-				case "*": {
-					this.resultado.setImaginario((a*d)+(b*c));
-					break;
-				}
-				
-				case "/": {
-					this.resultado.setImaginario(((b*c)-(a*d))/((c*c)+(d*d)));
-					break;
-				}
-			}
-		});
-		
-		
 	}
-
+	
 	public static void main(String[] args) {
 		launch(args);
-
 	}
 
 }
